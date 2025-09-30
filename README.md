@@ -55,6 +55,7 @@ To install a set of rocks (with the ability to add version constraints) use the 
   opts = {
     rocks = { "fzy", "pathlib.nvim ~> 1.0" }, -- specifies a list of rocks to install
     -- luarocks_build_args = { "--with-lua=/my/path" }, -- extra options to pass to luarocks's configuration script
+    -- luarocks_install_args = { "LUA_INCDIR=/usr/include/luajit-2.1" }, -- extra options to use when installing rocks
   },
 }
 ```

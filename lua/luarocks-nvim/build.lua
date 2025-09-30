@@ -52,7 +52,8 @@ local function run_job(args)
 end
 
 local rocks_after_build = nil
-local luarocks_args = nil
+local luarocks_build_args = nil
+local luarocks_install_args = nil
 local steps = {
 	{
 		description = "Checking git exists",
@@ -105,7 +106,7 @@ local steps = {
 				"/NOADMIN",
 				"/Q",
 			}
-			vim.list_extend(cmd, luarocks_args or {})
+			vim.list_extend(cmd, luarocks_build_args or {})
 			local error_code, stdout, stderr = run_job(cmd)
 			assert(error_code == 0, string.format("Failed to install luarocks: %s\n%s", stdout, stderr))
 		end,
@@ -123,16 +124,21 @@ local steps = {
 				"--lua-version=5.1",
 				"--force-config",
 			}
-			vim.list_extend(cmd, luarocks_args or {})
+			vim.list_extend(cmd, luarocks_build_args or {})
 			local error_code, stdout, stderr = run_job(cmd)
 			-- some known workarounds for better user experience
 			local next_try_args = {
-				{ "--with-lua-include=/usr/include" }, -- arch linux
+				-- arch linux
+				{ "--with-lua-include=/usr/include" },
+				{ "--with-lua-include=/usr/include/lua5.1" },
+				{ "--with-lua-include=/usr/include/luajit-2.1" },
 			}
 			-- while error_code ~= 0 try the workarounds
-			while error_code ~= 0 and #next_try_args > 0 do
-				error_code, _, _ = run_job(vim.list_extend(vim.deepcopy(cmd), next_try_args[1]))
-				table.remove(next_try_args, 1)
+			for _, args in ipairs(next_try_args) do
+			  error_code, _, _ = run_job(vim.list_extend(vim.deepcopy(cmd), args))
+			  if error_code == 0 then
+			    break -- stop once it works
+			  end
 			end
 			assert(error_code == 0, string.format("Failed to install luarocks: %s\n%s", stdout, stderr))
 		end,
@@ -173,7 +179,7 @@ local function build()
 	end
 	notify.info("Build completed")
 	if rocks_after_build then
-		rocks.ensure(rocks_after_build)
+		rocks.ensure(rocks_after_build, luarocks_install_args)
 	end
 end
 
@@ -183,8 +189,9 @@ return {
 	-- This is a bit funky. In short setup runs before build
 	-- So if setup received rocks to install, we need to process the install
 	-- after the build
-	ensure_rocks_after_build = function(ensure_rocks, args)
+	ensure_rocks_after_build = function(ensure_rocks, build_args, install_args)
 		rocks_after_build = ensure_rocks
-		luarocks_args = args
+		luarocks_build_args = build_args
+        luarocks_install_args = install_args
 	end,
 }

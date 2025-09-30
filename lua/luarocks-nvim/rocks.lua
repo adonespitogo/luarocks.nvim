@@ -1,7 +1,7 @@
 local paths = require("luarocks-nvim.paths")
 local notify = require("luarocks-nvim.notify")
 
-local function install(rocks)
+local function install(rocks, args)
 	local file, error = io.open(paths.rockspec, "w+")
 	assert(file, "[luarocks] Failed to write rockspec file " .. (error or ""))
 
@@ -22,21 +22,48 @@ build = { type = "builtin" }
 
 	local record = notify.info({ "⌛ Installing rocks:\n", table.concat(rocks, ",") })
 
-	local output = vim.fn.system({
+	-- base command
+	local cmd = {
 		paths.luarocks,
 		"install",
 		"--lua-version=5.1",
-		"--server='https://nvim-neorocks.github.io/rocks-binaries/'",
+		"--server=https://nvim-neorocks.github.io/rocks-binaries/",
 		"--deps-only",
-		paths.rockspec,
-	})
+	}
 
+	local normal_args, variable_args = {}, {}
+
+	if args and #args > 0 then
+		for _, v in ipairs(args) do
+			-- detect "NAME=value" (e.g. LUA_INCDIR=/usr/include/luajit-2.1)
+			if v:match("^[%w_]+=") then
+				table.insert(variable_args, v)
+			else
+				table.insert(normal_args, v)
+			end
+		end
+	end
+
+	-- add normal flags first
+	if #normal_args > 0 then
+		vim.list_extend(cmd, normal_args)
+	end
+
+	-- then the rockspec
+	table.insert(cmd, paths.rockspec)
+
+	-- finally variables
+	if #variable_args > 0 then
+		vim.list_extend(cmd, variable_args)
+	end
+
+	local output = vim.fn.system(cmd)
 	assert(vim.v.shell_error == 0, "[luarocks] Failed to install from rockspec\n" .. output)
 
 	notify.info("✅ Installed rocks", record)
 end
 
-local function ensure(rocks)
+local function ensure(rocks, args)
 	-- There are no rocks requests
 	if not rocks or #rocks == 0 then
 		return
@@ -64,7 +91,7 @@ local function ensure(rocks)
 	end
 
 	if #missing_rocks ~= 0 then
-		install(rocks)
+		install(rocks, args)
 	end
 end
 

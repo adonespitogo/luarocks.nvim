@@ -38,11 +38,11 @@ return {
 			end
 
 			-- We have requested rocks so ensure they are installed
-			rocks.ensure(opts.rocks)
+			rocks.ensure(opts.rocks, opts.luarocks_install_args)
 		else
 			-- We haven't built yet so register the rocks
 			-- to be installed after build finishes
-			build.ensure_rocks_after_build(opts.rocks, opts.luarocks_build_args)
+			build.ensure_rocks_after_build(opts.rocks, opts.luarocks_build_args, opts.luarocks_install_args)
 		end
 	end,
 }
